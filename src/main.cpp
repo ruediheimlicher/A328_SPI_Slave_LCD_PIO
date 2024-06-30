@@ -38,10 +38,13 @@ char     TransmitState = 0x00;
 
 #define SPI_CONTROL_DDR			DDRB
 #define SPI_CONTROL_PORT		PORTB
+
+#define SPI_CONTROL_DD			PORTB1 // pin for sending 2 bytes
 #define SPI_CONTROL_CS			PORTB2	//CS fuer HomeCentral Master
 #define SPI_CONTROL_MOSI		PORTB3
 #define SPI_CONTROL_MISO		PORTB4
 #define SPI_CONTROL_SCK			PORTB5
+
 
 #define waitspi() while(!(SPSR&(1<<SPIF)))
 
@@ -50,9 +53,10 @@ volatile uint8_t received=0;
 volatile uint8_t spistatus = 0;
 #define RECEIVED	0
 #define SPISTART	1
+#define SPIWORD		2
 
 volatile uint8_t datapos = 0;
-
+volatile uint16_t spidistanz = 0; 
 
 uint16_t loopcount0=0;
 uint16_t loopcount1=0;
@@ -128,17 +132,17 @@ void parse_message()
 ISR( SPI_STC_vect )
 {
 	PORTD |=(1<<0);//LED 0 ON
-
+ spidistanz = micros();
 	
 	//lcd_puthex(received);
 	uint8_t data = SPDR;
   spistatus |= (1<<RECEIVED);
 	SPDR = datapos;
 
+	
 	if (data == 0xFF ) // sync
   {
 		spistatus |= (1<<SPISTART);
-    //parse_message();
     received = 0;
 	}
 	else
@@ -225,7 +229,7 @@ int main (void)
 
 		 DDRB |= (1<<6);
 		 DDRB |= (1<<7);
-   
+   spidistanz = micros();
 	while (1)
 	{
       //PORTD ^= (1<<0);
@@ -249,7 +253,6 @@ int main (void)
 				if (spistatus & (1<<SPISTART))
 				{
 						spistatus &= ~(1<<SPISTART);
-			
 				}
 				lcd_gotoxy(4* (received % 4),linepos);
 				lcd_putint(incoming[received]);

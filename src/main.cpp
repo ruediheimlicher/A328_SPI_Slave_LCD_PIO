@@ -56,7 +56,7 @@ volatile uint8_t spistatus = 0;
 #define SPIWORD		2
 
 volatile uint8_t datapos = 0;
-volatile uint16_t spidistanz = 0; 
+volatile uint32_t spidistanz = 0; 
 
 uint16_t loopcount0=0;
 uint16_t loopcount1=0;
@@ -132,14 +132,28 @@ void parse_message()
 ISR( SPI_STC_vect )
 {
 	PORTD |=(1<<0);//LED 0 ON
- spidistanz = micros();
-	
+
 	//lcd_puthex(received);
 	uint8_t data = SPDR;
   spistatus |= (1<<RECEIVED);
 	SPDR = datapos;
+	received &= 0x07;
+ 	spidistanz = micros() - spidistanz;
+	if (spidistanz > 500) //neues paket, 1. byte
+	{
+		spistatus |= (1<<SPIWORD);
+		incoming[received] = data;
+	}
+	else // kurze distanz, zweites byte
+	{
+		received++;
+		incoming[received] = data;
+		received++;
+	}
+	spidistanz = micros();
+	PORTD &= ~(1<<0);//LED 0 OFF
 
-	
+	/*
 	if (data == 0xFF ) // sync
   {
 		spistatus |= (1<<SPISTART);
@@ -149,7 +163,7 @@ ISR( SPI_STC_vect )
 	{
 		incoming[received++] = data;
 	}
-
+*/
 
 }
 
@@ -241,21 +255,38 @@ int main (void)
 
 			if (spistatus |= (1<<RECEIVED))
 			{
+
 				spistatus &= ~(1<<RECEIVED);
+				/*
 				cli();
-				PORTD &= ~(1<<0);//LED 0 OF
+				//PORTD &= ~(1<<0);//LED 0 OF
 
  				lcd_gotoxy(0,1);
         lcd_putint(received);
 				//lcd_putc(' ');
 				//lcd_putint(incoming[received]);
+				*/
 				uint8_t linepos = (received / 4) + 2; // Zeilenwechsel nach 3
-				if (spistatus & (1<<SPISTART))
+				lcd_gotoxy(0,2);
+        lcd_putint(incoming[0]);
+				lcd_putc(' ');
+				lcd_putint(incoming[1]);
+				lcd_putc(' ');
+				lcd_putint(incoming[2]);
+				lcd_putc(' ');
+				lcd_putint(incoming[3]);
+
+				if(spistatus & (1<<SPIWORD))
 				{
-						spistatus &= ~(1<<SPISTART);
+					
+					//lcd_gotoxy(4* (received % 4),linepos);
+					//lcd_putint(incoming[received]);
+					
+
 				}
-				lcd_gotoxy(4* (received % 4),linepos);
-				lcd_putint(incoming[received]);
+
+
+				
 
 				sei();
 
@@ -274,6 +305,10 @@ int main (void)
             LOOPLEDPORT ^=(1<<LOOPLED);
             loopcount1 = 0;
             loopcount2++;
+						cli();
+						lcd_gotoxy(0,1);
+        		lcd_putint(received);
+						
             //lcd_gotoxy(10,1);
             //lcd_putint16(loopcount2);
 						//lcd_putc(' ');
@@ -281,7 +316,7 @@ int main (void)
 						//lcd_putc(' ');
 						//lcd_putint(received);
 						//lcd_putc('*');
-
+						sei();
          }
 		}
 		

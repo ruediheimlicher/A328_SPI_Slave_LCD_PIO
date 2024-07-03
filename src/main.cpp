@@ -245,9 +245,9 @@ int main (void)
 				//lcd_putint(incoming[received]);
 				*/
 				//uint8_t linepos = (received / 4) + 2; // Zeilenwechsel nach 3
-				//lcd_gotoxy(16,0);
-        //lcd_putint(received);
-				/*
+				lcd_gotoxy(16,0);
+        lcd_putint(received);
+				
 						lcd_gotoxy(0,2);
 						lcd_putint(incoming[0]);
 						lcd_putc(' ');
@@ -256,7 +256,7 @@ int main (void)
 						lcd_putint(incoming[4]);
 						lcd_putc(' ');
 						lcd_putint(incoming[6]);
-				*/
+				
 						lcd_gotoxy(0,3);
 						lcd_putint(incoming[1]);
 						lcd_putc(' ');
@@ -281,7 +281,7 @@ int main (void)
 			loopcount0=0;
 			
       loopcount1++;
-      if(loopcount1 > 0x1F)
+      if(loopcount1 > 0xFF)
          {
             LOOPLEDPORT ^=(1<<LOOPLED);
             loopcount1 = 0;

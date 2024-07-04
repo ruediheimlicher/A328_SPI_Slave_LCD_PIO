@@ -34,7 +34,7 @@
 #define SLAVE_COMMAND 2
 char     TransmitState = 0x00;
 //char*    TextString    = "AVR communicating via the SPI"+0x00;
-#define BUFSIZE 8
+#define BUFSIZE 16
 
 #define SPI_CONTROL_DDR			DDRB
 #define SPI_CONTROL_PORT		PORTB
@@ -192,7 +192,9 @@ int main (void)
 		lcd_gotoxy(0,0);
 		lcd_puts("SPI Slave LCD");
 	  _delay_ms(1000);
-	 
+	 	lcd_clr_line(0);
+		lcd_gotoxy(0,18);
+		lcd_putc('S');
 	 Init_Slave_IntContr();
 
 
@@ -248,7 +250,7 @@ int main (void)
 				lcd_gotoxy(16,0);
         lcd_putint(received);
 				
-						lcd_gotoxy(0,2);
+						lcd_gotoxy(0,0);
 						lcd_putint(incoming[0]);
 						lcd_putc(' ');
 						lcd_putint(incoming[2]);
@@ -257,7 +259,7 @@ int main (void)
 						lcd_putc(' ');
 						lcd_putint(incoming[6]);
 				
-						lcd_gotoxy(0,3);
+						lcd_gotoxy(0,1);
 						lcd_putint(incoming[1]);
 						lcd_putc(' ');
 						lcd_putint(incoming[3]);
@@ -265,12 +267,28 @@ int main (void)
 						lcd_putint(incoming[5]);
 						lcd_putc(' ');
 						lcd_putint(incoming[7]);
+
+						lcd_gotoxy(0,2);
+						lcd_putint(incoming[8]);
+						lcd_putc(' ');
+						lcd_putint(incoming[10]);
+						lcd_putc(' ');
+						lcd_putint(incoming[12]);
+						lcd_putc(' ');
+						lcd_putint(incoming[14]);
+				
+						lcd_gotoxy(0,3);
+						lcd_putint(incoming[9]);
+						lcd_putc(' ');
+						lcd_putint(incoming[11]);
+						lcd_putc(' ');
+						lcd_putint(incoming[13]);
+						lcd_putc(' ');
+						lcd_putint(incoming[15]);
+
 				
 				//PORTD &= ~(1<<7);
 
-				
-
-				//sei();
 
 			}
 		loopcount0++;

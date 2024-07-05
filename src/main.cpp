@@ -134,10 +134,13 @@ void parse_message()
 ISR( SPI_STC_vect )
 {
 	PORTD |=(1<<0);//LED 0 ON
+	//spidistanz = micros() - spidistanz;
+	
 
 	uint8_t data = SPDR;
 	SPDR = datapos;
   spistatus |= (1<<RECEIVED);
+	
 		
 	if (data == 0xFF) // sync
 		{
@@ -146,6 +149,8 @@ ISR( SPI_STC_vect )
 		incoming[received] = data;
 		received++;
 	PORTD &= ~(1<<0);//LED 0 OFF
+
+
 }
 
 
@@ -224,6 +229,7 @@ int main (void)
 		 DDRD |= (1<<6);
 		 DDRD |= (1<<7);
    spidistanz = micros();
+	
 	while (1)
 	{
       //PORTD ^= (1<<0);
@@ -235,7 +241,7 @@ int main (void)
 
 			if (spistatus |= (1<<RECEIVED))
 			{
-				spistatus &= ~(1<<RECEIVED);
+				//spistatus &= ~(1<<RECEIVED);
 				//PORTD |= (1<<7);//
 				/*
 				cli();
@@ -287,10 +293,10 @@ int main (void)
 						lcd_putint(incoming[15]);
 
 				
-				//PORTD &= ~(1<<7);
+					//PORTD &= ~(1<<7);
 
 
-			}
+			}// if (spistatus |= (1<<RECEIVED))
 		loopcount0++;
 		if (loopcount0>LOOPSTEP)
 		{

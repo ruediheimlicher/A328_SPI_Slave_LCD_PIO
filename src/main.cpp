@@ -2,6 +2,7 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
+//#include "sysclock.h"
 
 //#include <avr/pgmspace.h>
 //#include <avr/sleep.h>
@@ -192,7 +193,7 @@ int main (void)
 		lcd_gotoxy(0,0);
 		lcd_puts("SPI Slave LCD");
 	  _delay_ms(1000);
-	 
+	 lcd_clr_line(0);
 	 Init_Slave_IntContr();
 
 
@@ -221,7 +222,7 @@ int main (void)
 
 		 DDRD |= (1<<6);
 		 DDRD |= (1<<7);
-   spidistanz = micros();
+   //spidistanz = micros();
 	while (1)
 	{
       //PORTD ^= (1<<0);
@@ -231,8 +232,9 @@ int main (void)
       wdt_reset();
 
 
-			if (spistatus |= (1<<RECEIVED))
+			if (spistatus & (1<<RECEIVED))
 			{
+				LOOPLEDPORT ^=(1<<LOOPLED);
 				spistatus &= ~(1<<RECEIVED);
 				//PORTD |= (1<<7);//
 				/*
@@ -244,10 +246,14 @@ int main (void)
 				//lcd_putc(' ');
 				//lcd_putint(incoming[received]);
 				*/
-				//uint8_t linepos = (received / 4) + 2; // Zeilenwechsel nach 3
-				//lcd_gotoxy(16,0);
-        //lcd_putint(received);
-				/*
+				
+				uint8_t linepos = (received / 4) + 2; // Zeilenwechsel nach 3
+				lcd_gotoxy(12,0);
+        lcd_putint(linepos);
+				
+				lcd_gotoxy(16,0);
+        lcd_putint(received);
+				
 						lcd_gotoxy(0,2);
 						lcd_putint(incoming[0]);
 						lcd_putc(' ');
@@ -256,7 +262,7 @@ int main (void)
 						lcd_putint(incoming[4]);
 						lcd_putc(' ');
 						lcd_putint(incoming[6]);
-				*/
+				
 						lcd_gotoxy(0,3);
 						lcd_putint(incoming[1]);
 						lcd_putc(' ');
@@ -283,7 +289,7 @@ int main (void)
       loopcount1++;
       if(loopcount1 > 0x1F)
          {
-            LOOPLEDPORT ^=(1<<LOOPLED);
+            //LOOPLEDPORT ^=(1<<LOOPLED);
             loopcount1 = 0;
             loopcount2++;
 						//cli();

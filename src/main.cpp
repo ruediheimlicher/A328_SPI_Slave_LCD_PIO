@@ -18,6 +18,7 @@
 #include "lcd.c"
 #include "adc.c"
 
+#include "millis.h"
 // 
 
 
@@ -54,11 +55,13 @@ volatile uint8_t spistatus = 0;
 #define RECEIVED	0
 #define SPISTART	1
 #define SPIWORD		2
+#define SPIBYTE 	3
 #define SPI_ABSTAND	500
 #define SPI_PACKETSIZE 8
 volatile uint8_t datapos = 0;
-volatile uint32_t spidistanz = 0; 
-
+volatile uint16_t spidistanz = 0; 
+volatile millis_t lastspi = 0;
+volatile millis_t now = 0;
 uint16_t loopcount0=0;
 uint16_t loopcount1=0;
 uint16_t loopcount2=0;
@@ -134,14 +137,23 @@ void parse_message()
 ISR( SPI_STC_vect )
 {
 	PORTD |=(1<<0);//LED 0 ON
-	//spidistanz = micros() - spidistanz;
-	
 
+	 now = millis();
+	if(now - lastspi > 10) // langer Abstand
+	{
+		spistatus |= (1<<SPIWORD);
+	}
+	else
+	{
+		spistatus |= (1<<SPIBYTE);
+	}
+
+	//spidistanz = (millis() & 0xFFFF) - spidistanz;
+	
 	uint8_t data = SPDR;
 	SPDR = datapos;
   spistatus |= (1<<RECEIVED);
 	
-		
 	if (data == 0xFF) // sync
 		{
 			received = 0;
@@ -149,7 +161,8 @@ ISR( SPI_STC_vect )
 		incoming[received] = data;
 		received++;
 	PORTD &= ~(1<<0);//LED 0 OFF
-
+	
+	received &= 0x07;
 
 }
 
@@ -189,6 +202,7 @@ void slaveinit(void)
 
 int main (void) 
 {
+	millis_init();
 	  slaveinit();
 		
 	  // initialize the LCD 
@@ -228,7 +242,7 @@ int main (void)
 
 		 DDRD |= (1<<6);
 		 DDRD |= (1<<7);
-   spidistanz = micros();
+   spidistanz = millis()& 0xFF;
 	
 	while (1)
 	{
@@ -239,7 +253,7 @@ int main (void)
       wdt_reset();
 
 
-			if (spistatus |= (1<<RECEIVED))
+			if (spistatus & (1<<RECEIVED))
 			{
 				//spistatus &= ~(1<<RECEIVED);
 				//PORTD |= (1<<7);//
@@ -252,10 +266,41 @@ int main (void)
 				//lcd_putc(' ');
 				//lcd_putint(incoming[received]);
 				*/
-				//uint8_t linepos = (received / 4) + 2; // Zeilenwechsel nach 3
+
+				uint8_t linepos = (received / 4) ; // Zeilenwechsel nach 3
 				lcd_gotoxy(16,0);
         lcd_putint(received);
+				lcd_gotoxy(16,1);
+				lcd_putint12(now );
+				lcd_gotoxy(16,3);
+				if(spistatus & (1<<SPIBYTE))
+				{
+					lcd_putc('B');
+					spistatus &= ~(1<<SPIBYTE);
+				}
+				else if(spistatus & (1<<SPIWORD))
+				{
+					lcd_putc('W');
+					spistatus &= ~(1<<SPIWORD);
+				}
+				else
+				{
+					//lcd_putc('-');
+				}
+
 				
+        //
+				//uint8_t tt = millis() & 0xFF ;
+				//lcd_putint12(tt);
+				/*
+				if(linepos%2)
+				{
+				lcd_gotoxy((received % 4)*4,(linepos ));
+				//lcd_putc('*');
+				lcd_putint(incoming[received]);
+				}
+				*/
+						
 						lcd_gotoxy(0,0);
 						lcd_putint(incoming[0]);
 						lcd_putc(' ');
@@ -273,7 +318,7 @@ int main (void)
 						lcd_putint(incoming[5]);
 						lcd_putc(' ');
 						lcd_putint(incoming[7]);
-
+						
 						lcd_gotoxy(0,2);
 						lcd_putint(incoming[8]);
 						lcd_putc(' ');
@@ -291,8 +336,8 @@ int main (void)
 						lcd_putint(incoming[13]);
 						lcd_putc(' ');
 						lcd_putint(incoming[15]);
-
-				
+						
+									
 					//PORTD &= ~(1<<7);
 
 
@@ -349,5 +394,5 @@ int main (void)
 		
 	}//while
 
- return 0;
+ return ;
 }// main

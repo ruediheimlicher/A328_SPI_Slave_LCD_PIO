@@ -40,7 +40,7 @@ char     TransmitState = 0x00;
 #define SPI_CONTROL_DDR			DDRB
 #define SPI_CONTROL_PORT		PORTB
 
-#define SPI_CONTROL_DD			PORTB1 // pin for sending 2 bytes
+#define SPI_CONTROL_DD			PORTB1  // pin for sending 2 bytes
 #define SPI_CONTROL_CS			PORTB2	//CS fuer HomeCentral Master
 #define SPI_CONTROL_MOSI		PORTB3
 #define SPI_CONTROL_MISO		PORTB4
@@ -51,20 +51,33 @@ char     TransmitState = 0x00;
 #define waitspi() while(!(SPSR&(1<<SPIF)))
 
 volatile unsigned char incoming[BUFSIZE];
+
+volatile uint8_t in_data[BUFSIZE];
+volatile uint8_t in_code[BUFSIZE];
+
+volatile uint8_t in_counter = 0;
+
 volatile uint8_t received=0;
 volatile uint8_t spistatus = 0;
 #define RECEIVED	0
 #define SPISTART	1
-#define SPIWORD		2
-#define SPIBYTE		2
+#define SPIEND		2
+#define SPIBYTE0		3
+#define SPIBYTE1		4
+
+
+
 #define SPI_ABSTAND	500
 #define SPI_PACKETSIZE 8
 
 #define SPI_INT0	2
+
+#define SPI_MONO	2 // input mono
+
 volatile uint8_t datapos = 0;
-volatile uint32_t spidistanz = 0; 
+//volatile uint32_t spidistanz = 0; 
 
-
+volatile uint8_t int0counter = 0; 
 
 uint16_t loopcount0=0;
 uint16_t loopcount1=0;
@@ -74,13 +87,11 @@ uint16_t timercount0=0;
 // U8X8_SSD1327_EA_W128128_HW_I2C u8x8(U8X8_PIN_NONE,A5,A6);
 
 
- volatile unsigned long timer0_overflows = 0;
-volatile unsigned long timer0_micros = 0;
 
 // Timer0 overflow interrupt service routine
 ISR(TIMER0_OVF_vect) {
-    timer0_overflows++;
-    timer0_micros += 256; // Increment by 256 microseconds for each overflow
+    //timer0_overflows++;
+    // += 256; // Increment by 256 microseconds for each overflow
 }
 // Interrupt service routine for Timer0 compare match A
 ISR(TIMER0_COMPA_vect) 
@@ -116,7 +127,7 @@ unsigned long micros()
     unsigned long m;
     uint8_t oldSREG = SREG; // Save the status register
     cli(); // Disable interrupts
-    m = timer0_micros + TCNT0; // Add the current timer value
+    //m = timer0_micros + TCNT0; // Add the current timer value
 		sei();
     SREG = oldSREG; // Restore the status register
     return m;
@@ -146,11 +157,34 @@ void Init_Slave_IntContr (void)
 	IOReg   = SPSR;                         // Clear SPIF bit in SPSR
 	IOReg   = SPDR;
 
+	
 	//DDRD	= 0xFF;	
 	// Set Port D as output
 	sei(); // Enable global interrupts
 
 }
+
+void int0_init(void)
+{
+	DDRD &= ~(1<<SPI_INT0);
+	DDRB |= (1 << PB0);
+	// Enable falling edge interrupt on INT0
+    EICRA |= (1 << ISC01);
+    EICRA &= ~(1 << ISC00);
+    
+    // Enable INT0 interrupt
+    EIMSK |= (1 << INT0);
+}
+/*
+ISR(INT0_vect) 
+{
+    // Toggle LED on PB0
+		int0counter++;
+    PORTB ^= (1 << PB0);
+		spistatus &= ~(1<<SPIBYTE);
+}
+*/
+
 
 unsigned char spi_tranceiver (unsigned char data)
 {
@@ -193,12 +227,75 @@ void parse_message()
 ISR( SPI_STC_vect )
 {
 	//PORTD |=(1<<0);//LED 0 ON
-	PORTD &= ~(1<<0);
+	PORTD &= ~(1<<0);//LED 0 OFF
 	LOOPLEDPORT |= (1<<LOOPLED);
 	uint8_t data = SPDR;
 	SPDR = datapos;
-  spistatus |= (1<<RECEIVED);
+	spistatus |= (1<<RECEIVED);
+
+	if (spistatus & (1<<SPIBYTE0)) // zweites byte angekommen, data
+	{
+
+		spistatus |= (1<<SPIBYTE1);
+		if (in_counter > 7)
+		{
+			in_counter = 0;
+		}
+		//spistatus &= ~(1<<SPIBYTE0);
+		in_data[in_counter] = data;
+		in_counter++;
 		
+
+	}
+	else
+	{
+		
+		//in_counter &= 0x03;
+		spistatus |= (1<<SPIBYTE0); // ertes byte, code
+		in_code[in_counter] = data;
+		
+	}
+
+
+
+
+
+/*
+	if ((PINB & (1<<0)) == 0) // Mono  noch nicht gesetzt
+	{
+		in_code[in_counter] = data;
+		in_counter++;
+	}
+	else
+	{
+		//in_data[in_counter] = data;
+		//in_counter++;
+		
+	}
+	*/
+	//in_counter &= 0x03;
+	
+	//
+
+
+
+/*
+	if (!(spistatus & (1<<RECEIVED))) // Start mit neuem Bytpaket
+	{
+  	spistatus |= (1<<RECEIVED);
+		spistatus |= (1<<SPIBYTE0); // erstes byte
+		in_code[in_counter] = data;
+	}
+	else if(spistatus & (1<<SPIBYTE0))
+	{
+		spistatus &= ~(1<<SPIBYTE0);
+		spistatus |= (1<<SPIBYTE1);// 2. Byte
+		in_data[in_counter] = data;
+		in_counter++;
+		spistatus &= ~(1<<SPIBYTE1);
+		spistatus &= ~(1<<SPIBYTE0);
+	}
+*/		
 	if (data == 0xFF) // sync
 		{
 			received = 0;
@@ -208,14 +305,18 @@ ISR( SPI_STC_vect )
 		incoming[received] = data;
 		received++;
 		
-		PORTD |=(1<<0);
-	//PORTD &= ~(1<<0);//LED 0 OFF
-}
+		
+	PORTD |=(1<<0);
+	
+} // ISR
 
 
 void slaveinit(void)
 {
+	DDRD &= ~(1<<SPI_MONO); // Eingang vom Mono
 	DDRD |= (1<<DDD0); // ISR
+
+	//DDRB |= (1<<DDB0); // Ausgang fuer Mono
    /*
  			//Pin 0 von PORT D als Ausgang fuer Schalter: ON		
 	DDRD |= (1<<DDD1);		//Pin 1 von PORT D als Ausgang fuer Schalter: OFF
@@ -259,9 +360,9 @@ int main (void)
 	 lcd_clr_line(0);
 	 Init_Slave_IntContr();
 
-	//	timer0_init();
+		//	timer0_init();
 	
-
+		//int0_init();
 
     uint8_t Tastenwert=0;
     uint8_t TastaturCount=0;
@@ -302,50 +403,145 @@ int main (void)
 
 			if (spistatus & (1<<RECEIVED))
 			{
-				if(timercount0)
-				{
-					//PORTD ^= (1<<PORTD7);
-				}
-				timercount0 = 0;
+				
+
 				LOOPLEDPORT &= ~(1<<LOOPLED);
 				spistatus &= ~(1<<RECEIVED);
-				/*
-				spidistanz = (micros() - spidistanz) & 0xFFFF;
-				if(spidistanz < 20)
+				if(spistatus & (1<<SPIBYTE1)) // zweites byte gelesen
 				{
-					spistatus |= (1<<SPIWORD);
-					spistatus &= ~(1<<SPIBYTE);
+					spistatus &= ~(1<<SPIBYTE0);
+					spistatus &= ~(1<<SPIBYTE1);
 				}
-				else
-				{
-					spistatus &= ~(1<<SPIWORD);
-					spistatus |= (1<<SPIBYTE);
-				}
-				*/
-				//PORTD |= (1<<7);//
-				/*
-				cli();
-				//PORTD &= ~(1<<0);//LED 0 OFF
-
- 				lcd_gotoxy(0,1);
-        lcd_putint(received);
-				//lcd_putc(' ');
-				//lcd_putint(incoming[received]);
-				*/
 				
 				//uint8_t linepos = (received / 4) + 2; // Zeilenwechsel nach 3
 				//lcd_gotoxy(0,0);
         //lcd_putint12(spidistanz );
-				lcd_gotoxy(6,0);
-				lcd_putint(spistatus);
+				//lcd_gotoxy(6,0);
+				//lcd_putint(spistatus);
 				//spidistanz = 0;
 				lcd_gotoxy(16,0);
         lcd_putint(received);
 
 				//lcd_gotoxy(4* (received % 4),linepos);
 				//lcd_putint(incoming[received]);
+					/*
+					lcd_gotoxy(0,1);
+					lcd_putint(in_counter);
+					lcd_putc(' ');
+					lcd_putc('c');
+					lcd_putc(' ');
+					lcd_putint(in_code[in_counter]);
+					lcd_gotoxy(10,1);
+					lcd_putc('d');
+					lcd_putc(' ');
+					lcd_putint(in_data[in_counter]);
+					*/
+					if (PINB & (1<<0)) // Mono ist HI, SPI-input ist data
+					{
+			
+					}
+					else
+					{
+							//in_data[in_counter] = data;
+					}
 
+						lcd_gotoxy(17,2);
+						lcd_putint(in_counter);
+
+						
+
+
+
+						lcd_gotoxy(0,0);
+						lcd_putint(in_code[0]);
+						lcd_putc(':');
+						lcd_putc(' ');
+						lcd_putint(in_data[0]);
+
+						lcd_gotoxy(0,1);
+						lcd_putint(in_code[1]);
+						lcd_putc(':');
+						lcd_putc(' ');
+						lcd_putint(in_data[1]);
+
+						lcd_gotoxy(0,2);
+						lcd_putint(in_code[2]);
+						lcd_putc(':');
+						lcd_putc(' ');
+						lcd_putint(in_data[2]);
+
+						lcd_gotoxy(0,3);
+						lcd_putint(in_code[3]);
+						lcd_putc(':');
+						lcd_putc(' ');
+						lcd_putint(in_data[3]);
+
+						/*
+						// spalte 2
+						lcd_gotoxy(9,0);
+						lcd_putint(in_code[4]);
+						lcd_putc(':');
+						lcd_putc(' ');
+						lcd_putint(in_data[4]);
+
+						lcd_gotoxy(9,1);
+						lcd_putint(in_code[5]);
+						lcd_putc(':');
+						lcd_putc(' ');
+						lcd_putint(in_data[5]);
+
+						lcd_gotoxy(10,2);
+						lcd_putint(in_code[6]);
+						lcd_putc(':');
+						lcd_putc(' ');
+						lcd_putint(in_data[6]);
+
+						lcd_gotoxy(10,3);
+						lcd_putint(in_code[7]);
+						lcd_putc(':');
+						lcd_putc(' ');
+						lcd_putint(in_data[7]);
+						*/
+						
+						/*
+						lcd_gotoxy(0,0);
+						lcd_putint(in_code[0]);
+						lcd_putc(' ');
+						lcd_putint(in_code[1]);
+						lcd_putc(' ');
+						lcd_putint(in_code[2]);
+						lcd_putc(' ');
+						lcd_putint(in_code[3]);
 				
+						lcd_gotoxy(0,1);
+						lcd_putint(in_data[0]);
+						lcd_putc(' ');
+						lcd_putint(in_data[1]);
+						lcd_putc(' ');
+						lcd_putint(in_data[2]);
+						lcd_putc(' ');
+						lcd_putint(in_data[3]);
+						*/
+						/*
+						lcd_gotoxy(0,2);
+						lcd_putint(in_code[4]);
+						lcd_putc(' ');
+						lcd_putint(in_code[5]);
+						lcd_putc(' ');
+						lcd_putint(in_code[6]);
+						lcd_putc(' ');
+						lcd_putint(in_code[7]);
+				
+						lcd_gotoxy(0,3);
+						lcd_putint(in_data[4]);
+						lcd_putc(' ');
+						lcd_putint(in_data[5]);
+						lcd_putc(' ');
+						lcd_putint(in_data[6]);
+						lcd_putc(' ');
+						lcd_putint(in_data[7]);
+						*/
+						/*
 						lcd_gotoxy(0,2);
 						lcd_putint(incoming[0]);
 						lcd_putc(' ');
@@ -363,7 +559,7 @@ int main (void)
 						lcd_putint(incoming[5]);
 						lcd_putc(' ');
 						lcd_putint(incoming[7]);
-				
+						*/
 				//PORTD &= ~(1<<7);
 				
 				

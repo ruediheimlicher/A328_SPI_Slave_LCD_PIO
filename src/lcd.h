@@ -37,9 +37,9 @@
 #define LCD_DDR                DDRD
 
 //	defines fuer Slave:
-#define LCD_RSDS_PIN            3
-#define LCD_ENABLE_PIN          2
-#define LCD_CLOCK_PIN           1
+#define LCD_RSDS_PIN            5
+#define LCD_ENABLE_PIN          4
+#define LCD_CLOCK_PIN           3
 
 //	defines fuer mySlave:
 //#define LCD_RSDS_PIN            3

@@ -55,6 +55,8 @@ volatile unsigned char incoming[BUFSIZE];
 volatile uint8_t in_data[BUFSIZE];
 volatile uint8_t in_code[BUFSIZE];
 
+volatile uint8_t displaytask = 0;
+
 volatile uint8_t in_counter = 0;
 
 volatile uint8_t received=0;
@@ -255,7 +257,8 @@ ISR( SPI_STC_vect )
 		}
 
 		//in_counter &= 0x03;
-		spistatus |= (1<<SPIBYTE0); // ertes byte, code
+		spistatus |= (1<<SPIBYTE0); // erstes byte, code
+		displaytask = in_counter;
 		in_code[in_counter] = data;
 		
 	}
@@ -449,13 +452,17 @@ int main (void)
 							//in_data[in_counter] = data;
 					}
 
-						lcd_gotoxy(17,2);
-						lcd_putint(in_counter);
+						//lcd_gotoxy(17,2);
+						//lcd_putint(in_counter);
 
-						
+						uint8_t linepos = displaytask%4;
+						lcd_gotoxy(0,linepos);
+						lcd_putint(in_code[linepos]);
+						lcd_putc(':');
+						lcd_putc(' ');
+						lcd_putint(in_data[linepos]);
 
-
-
+						/*
 						lcd_gotoxy(0,0);
 						lcd_putint(in_code[0]);
 						lcd_putc(':');
@@ -479,7 +486,7 @@ int main (void)
 						lcd_putc(':');
 						lcd_putc(' ');
 						lcd_putint(in_data[3]);
-
+						*/
 						/*
 						// spalte 2
 						lcd_gotoxy(9,0);

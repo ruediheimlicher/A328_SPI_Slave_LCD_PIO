@@ -239,7 +239,7 @@ ISR( SPI_STC_vect )
 		spistatus |= (1<<SPIBYTE1);
 		if (in_counter > 7)
 		{
-			in_counter = 0;
+			//in_counter = 0;
 		}
 		//spistatus &= ~(1<<SPIBYTE0);
 		in_data[in_counter] = data;
@@ -249,7 +249,11 @@ ISR( SPI_STC_vect )
 	}
 	else
 	{
-		
+		if(data == 0xFF)
+		{
+			in_counter = 0;
+		}
+
 		//in_counter &= 0x03;
 		spistatus |= (1<<SPIBYTE0); // ertes byte, code
 		in_code[in_counter] = data;

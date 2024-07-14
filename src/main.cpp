@@ -55,6 +55,10 @@ volatile unsigned char incoming[BUFSIZE];
 volatile uint8_t in_data[BUFSIZE];
 volatile uint8_t in_code[BUFSIZE];
 
+volatile uint8_t incomingcode = 0;
+volatile uint8_t incomingdata = 0;
+
+
 volatile uint8_t displaytask = 0;
 
 volatile uint8_t in_counter = 0;
@@ -166,7 +170,7 @@ void Init_Slave_IntContr (void)
 
 }
 
-void int0_init(void)
+void INT0_init(void) // Dauer von 2 bytes detekieren
 {
 	DDRD &= ~(1<<SPI_INT0);
 	DDRB |= (1 << PB0);
@@ -177,15 +181,16 @@ void int0_init(void)
     // Enable INT0 interrupt
     EIMSK |= (1 << INT0);
 }
-/*
+
 ISR(INT0_vect) 
 {
     // Toggle LED on PB0
 		int0counter++;
-    PORTB ^= (1 << PB0);
-		spistatus &= ~(1<<SPIBYTE);
+    PORTB |= (1 << PB0); 
+		spistatus &= ~(1<<SPIBYTE0);
+		spistatus &= ~(1<<SPIBYTE1); // bereit fuer neues paket
 }
-*/
+
 
 
 unsigned char spi_tranceiver (unsigned char data)
@@ -245,12 +250,14 @@ ISR( SPI_STC_vect )
 		}
 		//spistatus &= ~(1<<SPIBYTE0);
 		in_data[in_counter] = data;
+		incomingdata = data;
 		in_counter++;
 		
 
 	}
 	else
 	{
+		PORTB &= ~(1 << PB0); // 
 		if(data == 0xFF)
 		{
 			in_counter = 0;
@@ -260,6 +267,7 @@ ISR( SPI_STC_vect )
 		spistatus |= (1<<SPIBYTE0); // erstes byte, code
 		displaytask = in_counter;
 		in_code[in_counter] = data;
+		incomingcode = data;
 		
 	}
 
@@ -303,7 +311,7 @@ ISR( SPI_STC_vect )
 		spistatus &= ~(1<<SPIBYTE0);
 	}
 */		
-	if (data == 0xFF) // sync
+		if (data == 0xFF) // sync
 		{
 			received = 0;
 		}
@@ -369,7 +377,7 @@ int main (void)
 
 		//	timer0_init();
 	
-		//int0_init();
+		INT0_init();
 
     uint8_t Tastenwert=0;
     uint8_t TastaturCount=0;
@@ -393,7 +401,7 @@ int main (void)
  //u8x8.begin();
  
 	   //timer2();
-
+		
 		
 		 DDRD |= (1<<7);
 		 PORTD |=(1<<0);
@@ -401,7 +409,7 @@ int main (void)
 	 sei();
 	while (1)
 	{
-      //PORTD ^= (1<<0);
+      //PORTD ^= (1<<7);
       //_delay_ms(50);
      // PORTD &= ~(1<<0);
 		//Blinkanzeige
@@ -453,15 +461,47 @@ int main (void)
 					}
 
 						//lcd_gotoxy(17,2);
-						//lcd_putint(in_counter);
+						//lcd_putint(incomingcode);
+						//incomingcode = 101;
+						switch (incomingcode)
+						{
+								case 101:
+								{
+									lcd_gotoxy(12,1);
+									lcd_putint(incomingcode);
+									lcd_putc(':');
+									lcd_putc(' ');
+									//lcd_gotoxy(12,1);
+									lcd_putint(incomingdata);
+								}break;
+								case 102:
+								{
+									lcd_gotoxy(12,2);
+									lcd_putint(incomingcode);
+									lcd_putc(':');
+									lcd_putc(' ');
+									lcd_putint(incomingdata);
+								}break;
 
+								case 103:
+								{
+									lcd_gotoxy(12,3);
+									lcd_putint(incomingcode);
+									lcd_putc(':');
+									lcd_putc(' ');
+									lcd_putint(incomingdata);
+								}break;
+
+						}// switch
+
+						/*
 						uint8_t linepos = displaytask%4;
 						lcd_gotoxy(0,linepos);
 						lcd_putint(in_code[linepos]);
 						lcd_putc(':');
 						lcd_putc(' ');
 						lcd_putint(in_data[linepos]);
-
+						*/
 						/*
 						lcd_gotoxy(0,0);
 						lcd_putint(in_code[0]);

@@ -31,6 +31,7 @@
 #define _LCD_H
 
 #include <inttypes.h>
+//#include "defines.h"
 
 /* AVR port and pins connected to '164 and/or LCD */
 #define LCD_PORT               PORTD
@@ -88,11 +89,12 @@
 #define LCD_DDRAM             7      /* DB7: set DD RAM address             */
 
 
-
 /* F_CPU is used by delay routines from util/delay.h. May already be defined */
 #ifndef F_CPU
 #define F_CPU 1000000UL  /* 1 MHz CPU clock */
 #endif
+
+
 
 /* functions */
 void lcd_backlight(int);
@@ -121,4 +123,20 @@ void lcd_put_zeit(uint8_t minuten, uint8_t stunden);
 void lcd_put_wochentag(uint8_t wd);
 void lcd_put_temperatur(uint16_t temperatur);
 void lcd_put_tempAbMinus20(uint16_t temperatur);
+
+// https://stackoverflow.com/questions/1433204/how-do-i-use-extern-to-share-variables-between-source-files
+
+void lcd_write_custom(uint8_t pos, uint8_t *map) ;
+
+
+extern uint8_t pfeilrechts[];
+extern uint8_t pfeilinks[];
+extern uint8_t pfeilauf[];
+extern uint8_t pfeilab[];
+extern uint8_t kreuz[];
+extern uint8_t rahmen[];
+
+
+
+
 #endif

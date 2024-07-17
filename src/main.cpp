@@ -12,14 +12,14 @@
 #include <avr/eeprom.h>
 #include <inttypes.h>
 #include <avr/wdt.h>
-//#include "defines.h"
+#include "defines.h"
 #include <stdint.h>
 #include <util/twi.h>
 
 #include "lcd.c"
 #include "adc.c"
 
-// 
+
 
 
 
@@ -65,6 +65,10 @@ volatile uint8_t in_counter = 0;
 
 volatile uint8_t received=0;
 volatile uint8_t spistatus = 0;
+volatile uint8_t joystickoncounter = 0;
+
+
+volatile uint8_t analogtastaturstatus = 0;
 #define RECEIVED	0
 #define SPISTART	1
 #define SPIEND		2
@@ -92,7 +96,85 @@ uint16_t loopcount2=0;
 uint16_t timercount0=0;
 // U8X8_SSD1327_EA_W128128_HW_I2C u8x8(U8X8_PIN_NONE,A5,A6);
 
+uint8_t pfeilrechts[] = 
+{
+  0x00,
+  0x00,
+  0x08,
+  0x0C,
+  0x0E,
+  0x0C,
+  0x08,
+  0x00
+};
+uint8_t pfeillinks[] = {
+  0x00,
+  0x02,
+  0x06,
+  0x0E,
+  0x06,
+  0x02,
+  0x00,
+  0x00
+};
 
+uint8_t pfeilauf[] = 
+{
+  0x00,
+  0x00,
+  0x04,
+  0x0E,
+  0x1F,
+  0x00,
+  0x00,
+  0x00
+};
+uint8_t pfeilab[] = 
+{
+  0x00,
+  0x00,
+  0x1F,
+  0x0E,
+  0x04,
+  0x00,
+  0x00,
+  0x00
+};
+
+
+uint8_t kreuz[] = 
+{
+  0x00,
+  0x11,
+  0x0A,
+  0x04,
+  0x04,
+  0x0A,
+  0x11,
+  0x00
+};
+
+uint8_t rahmen[] = {
+  0x00,
+  0x1F,
+  0x11,
+  0x11,
+  0x11,
+  0x11,
+  0x1F,
+  0x00
+};
+
+byte gitter[] = {
+    0x15,
+  0x00,
+  0x11,
+  0x00,
+  0x11,
+  0x00,
+  0x15,
+  0x00
+};
 
 // Timer0 overflow interrupt service routine
 ISR(TIMER0_OVF_vect) {
@@ -368,11 +450,28 @@ int main (void)
 		
 	  // initialize the LCD 
 	  lcd_initialize(LCD_FUNCTION_8x2, LCD_CMD_ENTRY_INC, LCD_CMD_ON);
-	
+		_delay_ms(10);
+
+		//lcd_custom();
+
+		lcd_write_custom(0,kreuz);
+		lcd_write_custom(1,rahmen);
+		lcd_write_custom(2,pfeilauf);
+		lcd_write_custom(3,pfeilab);
+		lcd_write_custom(4,pfeillinks);
+		lcd_write_custom(5,pfeilrechts);
+		lcd_write_custom(6,gitter);
+
+
+		
+		
+		
+
 		lcd_gotoxy(0,0);
 		lcd_puts("SPI Slave LCD");
 	  _delay_ms(1000);
 	 lcd_clr_line(0);
+	 
 	 Init_Slave_IntContr();
 
 		//	timer0_init();
@@ -406,6 +505,23 @@ int main (void)
 		 DDRD |= (1<<7);
 		 PORTD |=(1<<0);
    //spidistanz = micros();
+	 /*
+		lcd_gotoxy(0,1);
+		
+		lcd_putc(0);
+		lcd_putc(' ');		
+		lcd_putc(1);
+		lcd_putc(' ');				
+		lcd_putc(2);
+		lcd_putc(' ');	
+		lcd_putc(3);
+		lcd_putc(' ');	
+		lcd_putc(4);
+		lcd_putc(' ');		
+		lcd_putc(5);
+		lcd_putc(' ');		
+		lcd_putc(6);
+*/
 	 sei();
 	while (1)
 	{
@@ -428,14 +544,16 @@ int main (void)
 					spistatus &= ~(1<<SPIBYTE1);
 				}
 				
+				
+											//lcd_puts("Joystick");
 				//uint8_t linepos = (received / 4) + 2; // Zeilenwechsel nach 3
 				//lcd_gotoxy(0,0);
         //lcd_putint12(spidistanz );
 				//lcd_gotoxy(6,0);
 				//lcd_putint(spistatus);
 				//spidistanz = 0;
-				lcd_gotoxy(16,0);
-        lcd_putint(received);
+				//lcd_gotoxy(16,0);
+        //lcd_putint(received);
 
 				//lcd_gotoxy(4* (received % 4),linepos);
 				//lcd_putint(incoming[received]);
@@ -465,7 +583,7 @@ int main (void)
 						//incomingcode = 101;
 						switch (incomingcode)
 						{
-								case 101:
+								case 101: // Tastatur
 								{
 									lcd_gotoxy(12,1);
 									lcd_putint(incomingcode);
@@ -473,6 +591,7 @@ int main (void)
 									lcd_putc(' ');
 									//lcd_gotoxy(12,1);
 									lcd_putint(incomingdata);
+									
 								}break;
 								case 102:
 								{
@@ -481,6 +600,37 @@ int main (void)
 									lcd_putc(':');
 									lcd_putc(' ');
 									lcd_putint(incomingdata);
+									if(incomingdata & 0x80)
+									{	
+
+										analogtastaturstatus |= (1<<JOYSTICK_ON);
+										joystickoncounter++;
+											//lcd_gotoxy(0,0);
+											//lcd_puts("Joystick");
+									}// incomingdata
+									else
+									{
+										analogtastaturstatus &= ~(1<<JOYSTICK_ON);
+										//lcd_gotoxy(0,0);
+										//	lcd_puts("        ");
+									}
+
+									if(incomingdata & 0x40)
+									{	
+
+										analogtastaturstatus |= (1<<CALIB_ON);
+										joystickoncounter++;
+											//lcd_gotoxy(0,0);
+											//lcd_puts("Joystick");
+									}// incomingdata
+									else
+									{
+										analogtastaturstatus &= ~(1<<CALIB_ON);
+										//lcd_gotoxy(0,0);
+										//	lcd_puts("        ");
+									}
+
+
 								}break;
 
 								case 103:
@@ -629,9 +779,39 @@ int main (void)
       if(loopcount1 > 0x1F)
          {
             //LOOPLEDPORT ^=(1<<LOOPLED);
+				if (analogtastaturstatus & (1<<JOYSTICK_ON))
+				{
+					
+					lcd_gotoxy(0,0);
+					lcd_puts("JOYSTICK");
+
+				}
+				else
+				{
+					lcd_gotoxy(0,0);
+					lcd_puts("        ");
+				}
+
+				if (analogtastaturstatus & (1<<CALIB_ON))
+				{
+					
+					lcd_gotoxy(0,1);
+					lcd_puts("CALIB");
+
+				}
+				else
+				{
+					lcd_gotoxy(0,1);
+					lcd_puts("     ");
+				}
+
             loopcount1 = 0;
             loopcount2++;
 						//cli();
+						lcd_gotoxy(0,3);
+						lcd_putint(joystickoncounter);
+						lcd_gotoxy(6,3);
+						lcd_putint(analogtastaturstatus);
 						
 						/*
 						lcd_gotoxy(0,2);

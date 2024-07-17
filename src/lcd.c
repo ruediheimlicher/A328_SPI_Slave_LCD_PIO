@@ -46,12 +46,21 @@
     ****************************************************************************
 */
 
+
+
 #include "lcd.h"
+
+
+
+
 #include <inttypes.h>
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdlib.h>
 extern char* wochentag[];
+
+
+
 /*
  * Turns the backlight on or off.  The LCD_BACKLIGHT_PIN should be defined as
  * the pin connected to the backlight control of the LCD.
@@ -59,6 +68,10 @@ extern char* wochentag[];
  * Parameters:
  *      backlight_on    0=off, 1=on
 */
+
+
+
+
 
 void lcddelay_ms(unsigned int ms)/* delay for a minimum of <ms> */
 {
@@ -70,6 +83,7 @@ void lcddelay_ms(unsigned int ms)/* delay for a minimum of <ms> */
 		ms--;
 	}
 }
+
 
 
 
@@ -608,7 +622,7 @@ void lcd_put_frac(char* string, uint8_t start, uint8_t komma, uint8_t frac)
   // Vorzeichen ausgeben  
   if (string[0]=='-') lcd_putc('-'); else lcd_putc(' ');
  
-  // Vorkommastellen ohne f�hrende Nullen ausgeben
+  // Vorkommastellen ohne fuehrende Nullen ausgeben
   for(i=start; i;i--) {
     if (flag==1 || string[i]!='0') {
       lcd_putc(string[i]);
@@ -814,6 +828,31 @@ void lcd_put_tempAbMinus20(uint16_t temperatur)
 		lcd_puts(outstring);
 		lcddelay_ms(2);
 }
+
+
+void lcd_write_custom_char(unsigned char loc, unsigned char *map) {
+    loc &= 0x7;  // We only have 8 locations 0-7
+    lcd_load_byte(0x40 + (loc * 8));  // Command to set CGRAM address
+        lcd_send_cmd();
+    for (int i = 0; i < 8; i++) 
+    {
+        lcd_load_byte(map[i]);  // Write character pattern to CGRAM
+        lcd_send_cmd();
+    }
+}
+void lcd_write_custom(uint8_t pos, uint8_t *map) 
+{
+    pos &= 0x7;  // We only have 8 locations 0-7
+    lcd_load_byte(0x40 + (pos * 8));  // Command to set CGRAM address
+        lcd_send_cmd();
+    for (int i = 0; i < 8; i++) 
+    {
+        lcd_load_byte(map[i]);  // Write character pattern to CGRAM
+        lcd_send_char();
+    }
+}
+
+
 
 
 

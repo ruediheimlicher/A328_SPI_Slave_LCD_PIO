@@ -14,6 +14,7 @@
 struct adcwert16 ADCWert16;
 
 
+
 struct adcwert16 readKanal16Bit(uint8_t kanal)
 {
 	uint8_t i;
@@ -23,7 +24,7 @@ struct adcwert16 readKanal16Bit(uint8_t kanal)
 	tempWert.wert8H=0;
 	ADCSRA = (1<<ADEN) | (1<<ADPS2) | (1<<ADPS0);    // Frequenzvorteiler auf 32 setzen und ADC aktivieren 
 	
-	ADMUX = kanal;                      // Ÿbergebenen Kanal waehlen
+	ADMUX = kanal;                      // ï¿½bergebenen Kanal waehlen
 	//ADMUX |= (1<<REFS1) | (1<<REFS0); // interne Referenzspannung nutzen 
 	ADMUX |=  (1<<REFS0); // VCC als Referenzspannung nutzen 
 	
@@ -53,7 +54,7 @@ void initADC(uint8_t derKanal)
 {
    ADCSRA = (1<<ADEN) | (1<<ADPS2) | (1<<ADPS0);    // Frequenzvorteiler auf 32 setzen und ADC aktivieren 
  
-  ADMUX = derKanal;                      // Ÿbergebenen Kanal waehlen
+  ADMUX = derKanal;                      // ï¿½bergebenen Kanal waehlen
 //	REFS0 und REFS1 LO: Externe Referenzspannung
 //	ADMUX |= (1<<REFS1) | (1<<REFS0); // interne Referenzspannung nutzen 
 //	ADMUX |= (1<<REFS0); // VCC als Referenzspannung nutzen 
@@ -71,7 +72,7 @@ uint16_t readKanal(uint8_t derKanal) //Unsere Funktion zum ADC-Channel aus lesen
   uint8_t i;
   uint16_t result = 0;         //Initialisieren wichtig, da lokale Variablen
                                //nicht automatisch initialisiert werden und
-                               //zufŠllige Werte haben. Sonst kann Quatsch rauskommen
+                               //zufï¿½llige Werte haben. Sonst kann Quatsch rauskommen
  ADMUX |= derKanal; 
   // Eigentliche Messung - Mittelwert aus 4 aufeinanderfolgenden Wandlungen
   for(i=0;i<4;i++)
@@ -99,11 +100,11 @@ uint16_t readKanalOrig(uint8_t derKanal, uint8_t num) //Unsere Funktion zum ADC-
   uint8_t i;
   uint16_t result = 0;         //Initialisieren wichtig, da lokale Variablen
                                //nicht automatisch initialisiert werden und
-                               //zufŠllige Werte haben. Sonst kann Quatsch rauskommen
+                               //zufï¿½llige Werte haben. Sonst kann Quatsch rauskommen
  
    ADCSRA = (1<<ADEN) | (1<<ADPS2) | (1<<ADPS0);    // Frequenzvorteiler auf 32 setzen und ADC aktivieren 
  
-  ADMUX = derKanal;                      // Ÿbergebenen Kanal waehlen
+  ADMUX = derKanal;                      // ï¿½bergebenen Kanal waehlen
 //  ADMUX |= (1<<REFS1) | (1<<REFS0); // interne Referenzspannung nutzen 
   ADMUX |= (1<<REFS0); // VCC als Referenzspannung nutzen 
  

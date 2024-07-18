@@ -578,8 +578,8 @@ int main (void)
 							//in_data[in_counter] = data;
 					}
 
-						//lcd_gotoxy(17,2);
-						//lcd_putint(incomingcode);
+						lcd_gotoxy(0,0);
+						lcd_putint(incomingcode);
 						//incomingcode = 101;
 						switch (incomingcode)
 						{
